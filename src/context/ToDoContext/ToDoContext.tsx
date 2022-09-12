@@ -1,11 +1,11 @@
-import { createContext, FC, PropsWithChildren, useState } from "react";
+import { createContext, FC, PropsWithChildren, ReactNode, useState } from "react";
 import { getLocalStorage } from "../../utils";
 
 
 
-type ToDoStateType = 'to-do' | 'in-progress' | 'done';
+export type ToDoStateType = 'to-do' | 'in-progress' | 'done';
 
-interface IToDoItem {
+export interface IToDoItem {
     id: string;
     state: ToDoStateType;
     title: string;
@@ -18,7 +18,7 @@ type GetByIdType = (id: string) => IToDoItem | undefined;
 type GetByStateType = (state: ToDoStateType) => IToDoItem[];
 type RemoveFromToDoListType = (id: string) => void;
 
-interface IToDoContextValues {
+export interface IToDoContextValues {
     toDoItems: IToDoItem[];
     addToDoItem: AddToDoItemType;
     updateToDoItem: UpdateToDoItemType;
@@ -27,17 +27,22 @@ interface IToDoContextValues {
     removeFromToDoList: RemoveFromToDoListType;
 }
 
-const ToDoContext = createContext<IToDoContextValues | undefined>(undefined);
+export const ToDoContext = createContext<IToDoContextValues | undefined>(undefined);
 
-export const ToDoContextProvider: FC<PropsWithChildren> = ({children}) => {
-    const {values} = getLocalStorage();
-    const [toDoItems, setToDoItems] = useState<IToDoItem[]>(values.toDoItems || []);
+interface IToDoContextProvider {
+    children: (args: IToDoContextValues) => ReactNode;
+    initialToDoItems: IToDoItem[];
+}
+
+export const ToDoContextProvider: FC<IToDoContextProvider> = ({children, initialToDoItems}) => {
+    const [toDoItems, setToDoItems] = useState<IToDoItem[]>(initialToDoItems);
     
     const addToDoItem: AddToDoItemType = (toDoItem) => {
         setToDoItems(prev => [...prev, toDoItem])
     }
 
     const updateToDoItem: UpdateToDoItemType = (toDoItem) => {
+        
         setToDoItems((prev) => {
             const updatedValues = prev.map((item) => {
                 if (item.id !== toDoItem.id) return item;
@@ -56,7 +61,7 @@ export const ToDoContextProvider: FC<PropsWithChildren> = ({children}) => {
 
     const getByState: GetByStateType = (state) => {
         return toDoItems.filter((item) => {
-            item.state === state;
+            return item.state === state;
         })
     }
 
@@ -66,16 +71,18 @@ export const ToDoContextProvider: FC<PropsWithChildren> = ({children}) => {
         });
     }
 
+    const contextValues = {
+        toDoItems,
+        addToDoItem,
+        updateToDoItem,
+        getById,
+        getByState,
+        removeFromToDoList,
+    }
+
     return (
-        <ToDoContext.Provider value={{
-            toDoItems,
-            addToDoItem,
-            updateToDoItem,
-            getById,
-            getByState,
-            removeFromToDoList,
-        }}>
-            {children}
+        <ToDoContext.Provider value={contextValues}>
+            {children(contextValues)}
         </ToDoContext.Provider>
     )
 }
